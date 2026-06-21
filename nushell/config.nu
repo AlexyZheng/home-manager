@@ -40,7 +40,7 @@ def nano [...args: string] {
     ^sudo nano -A -D -F -G -I -L -M -S -U -Z -a -l -q '-_' '-/' ...$args
 }
 
-alias vps = ssh ubuntu@rabota.76543211.xyz
+alias vps = ssh ubuntu@work.76543211.xyz
 alias yay = paru
 alias cachyos-rate-mirrors = sudo cachyos-rate-mirrors
 alias docker = sudo podman
