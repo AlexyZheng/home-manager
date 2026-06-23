@@ -109,7 +109,7 @@ def bash_prompt [] {
         $raw_pwd | path basename
     }
 
-    $"[($user)@($host) ($current_dir)]📟$ "
+    $"[($user)@($host) ($current_dir)]$ "
 }
 
 def bash_has_line_continuation [code: string] {
@@ -151,7 +151,7 @@ def bash_needs_more [code: string] {
     }
 }
 
-def b [] {
+def bash [] {
     mut lines = []
 
     loop {
