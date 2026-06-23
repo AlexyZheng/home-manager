@@ -17,13 +17,22 @@
 # options using:
 #     config nu --doc | nu-highlight | less -R
 
+
 # config shell environment
 fastfetch --logo none --config ~/.config/fastfetch/config.jsonc
 $env.config.show_banner = false
 $env.PROMPT_COMMAND_RIGHT = ""
 $env.config.buffer_editor = ["nano" -A -D -F -G -G -I -L -M -S -U -Z -a -q -_ -/]
 
-use ~/.config/nushell/scripts/bash-env.nu
+
+$env.config = {
+    # ... your existing configuration ...
+    history: {
+        file_format: "sqlite" # Changes backend from "plaintext" to "sqlite"
+        isolation: false       # Optional: Set to true if you want to isolate history per session
+    }
+}
+
 
 # Set Fcitx environment variables for the session
 $env.GTK_IM_MODULE = "fcitx"
@@ -31,6 +40,7 @@ $env.QT_IM_MODULE = "fcitx"
 $env.XMODIFIERS = "@im=fcitx"
 # $env.SDL_IM_MODULE = "fcitx"
 
+# Aliases
 def "sudo nano" [...args: string] {
     ^sudo nano -A -D -F -G -I -L -M -S -U -Z -a -q '-_' '-/' ...$args
 }
@@ -47,7 +57,6 @@ def "nano -l" [...args: string] {
     ^sudo nano -A -D -F -G -I -L -M -S -U -Z -a -l -q -l '-_' '-/' ...$args
 }
 
-
 alias vps = ssh ubuntu@work.76543211.xyz
 alias yay = paru
 alias cachyos-rate-mirrors = sudo cachyos-rate-mirrors
@@ -62,10 +71,10 @@ alias systemctl = sudo systemctl
 alias cat = open
 
 
-# 1. Fetch system details safely using modern sys commands                                                                       
-let host_data = (sys host | select hostname os_version kernel_version uptime)                                                    
-                                                                                                                                 
-# 2. Extract BIOS firmware info                                                                                                  
+# 1. Fetch system details safely using modern sys commands
+let host_data = (sys host | select hostname os_version kernel_version uptime)
+
+# 2. Extract BIOS firmware info
 let bios_version = (try { open /sys/class/dmi/id/bios_version | str trim } catch { null })
 
 # 4. Merge all gathered metrics into one uniform Nushell Record
@@ -74,7 +83,6 @@ let result = (
     | insert bios_version $bios_version
     | move bios_version --after hostname
     | move os_version --after kernel_version
-
 
 )
 
@@ -92,12 +100,12 @@ if not ($filtered_result | is-empty) {
     print $"  uptime: ($filtered_result | get uptime)"
 }
 
-#####################################################################################################
-
-#temporary bash shell
+######################################################################################################
+# Helper: Generate the interactive bash prompt
 def bash_prompt [] {
     let user = ($env.USER? | default "user")
-    let host = (sys host | get hostname | default "host")
+    # OPTIMIZATION: $nu.os-info is cached and instant compared to 'sys host'
+    let host = ($nu.os-info.hostname? | default "bash")
     let raw_pwd = $env.PWD
     let home = ($env.HOME? | default "")
 
@@ -112,6 +120,7 @@ def bash_prompt [] {
     $"[($user)@($host) ($current_dir)]$ "
 }
 
+# Helper: Detect line continuations (\)
 def bash_has_line_continuation [code: string] {
     let last_line = (
         $code
@@ -120,10 +129,10 @@ def bash_has_line_continuation [code: string] {
         | default ""
         | str trim --right
     )
-
     $last_line | str ends-with '\'
 }
 
+# Helper: Check if syntax requires more input lines
 def bash_needs_more [code: string] {
     if (bash_has_line_continuation $code) {
         return true
@@ -151,53 +160,7 @@ def bash_needs_more [code: string] {
     }
 }
 
-def bash [] {
-    mut lines = []
-
-    loop {
-        let prompt = if (($lines | length) == 0) {
-            bash_prompt
-        } else {
-            "bash> "
-        }
-
-        let line = try {
-            input --reedline $prompt
-        } catch {
-            return
-        }
-
-        $lines = ($lines | append $line)
-
-        let code = ($lines | str join "\n")
-
-        if not (bash_needs_more $code) {
-            break
-        }
-    }
-
-    let code = ($lines | str join "\n")
-
-    try {
-        ^bash -c $code
-    } catch {
-        null
-    }
-}
-
-######################################################################
-# Capture exported environment changes from bash/sh/ksh scripts into Nushell.
-#
-# Usage:
-#   bash-env ./script.sh
-#   bash-env --shell sh ./script.sh
-#   bash-env --shell ksh ./script.ksh
-#
-# Notes:
-# - Captures exported env vars only.
-# - Captures new/changed variables.
-# - Does not remove Nushell env vars that the script unsets.
-
+# Helper: Parse raw env lines into a Nushell record
 def _bash_env_lines_to_record [] {
   lines
   | where {|line| $line != "" }
@@ -207,6 +170,7 @@ def _bash_env_lines_to_record [] {
     }
 }
 
+# Helper: Handle value conversions (like PATH arrays)
 def _bash_env_convert_value [
   name: string
   value: string
@@ -230,6 +194,7 @@ def _bash_env_convert_value [
   }
 }
 
+# Helper: Compute the differences between environments
 def _bash_env_changed_record [
   before: record
 ] {
@@ -246,45 +211,124 @@ def _bash_env_changed_record [
     }
 }
 
-def --env bash-env [
-  script: path
-  --shell (-s): string = "bash" # one of: bash, sh, ksh
+# Unified Bash Wrapper with Environment Sync and Automated Output Parsing
+def --env bash [
+    script?: path                  # Optional script file path to execute
+    --format (-f): string = "auto" # auto, lines, columns, json, csv, yaml
 ] {
-  if not ($shell in ["bash", "sh", "ksh"]) {
-    error make {
-      msg: $"bash-env: --shell must be one of: bash, sh, ksh; got '($shell)'"
+    # 1. Prepare temporary tracking files
+    let before_path = (mktemp)
+    let after_path = (mktemp)
+
+    # 2. Determine execution context (Script vs Interactive REPL Loop)
+    let code = if $script != null {
+        let script_path = ($script | path expand)
+        if not ($script_path | path exists) {
+            try { rm $before_path $after_path } catch {}
+            error make { msg: $"bash: script does not exist: ($script_path)" }
+        }
+        $". '($script_path)'"
+    } else {
+        mut lines = []
+        loop {
+            # OPTIMIZATION: Use is-empty for cleaner logic
+            let prompt = if ($lines | is-empty) {
+                bash_prompt
+            } else {
+                "bash> "
+            }
+
+            let line = try {
+                input --reedline $prompt
+            } catch {
+                try { rm $before_path $after_path } catch {}
+                return
+            }
+
+            $lines = ($lines | append $line)
+            let current_code = ($lines | str join "\n")
+
+            if not (bash_needs_more $current_code) {
+                break
+            }
+        }
+        $lines | str join "\n"
     }
-  }
 
-  let script_path = ($script | path expand)
+    # 3. Execute payload, capturing STDOUT/STDERR, and sync environments
+    let raw_output = try {
+        # Using pipeline capture via 'complete' to grab raw text output
+        let exec = (^bash -c 'env > "$1"; eval "$3"; env > "$2"' nu-bash-env $before_path $after_path $code | complete)
 
-  if not ($script_path | path exists) {
-    error make {
-      msg: $"bash-env: script does not exist: ($script_path)"
+        if ($exec.stderr | str trim) != "" {
+            print -e $exec.stderr
+        }
+
+        let before = (open --raw $before_path | _bash_env_lines_to_record)
+        let after = (open --raw $after_path | _bash_env_lines_to_record)
+        let changes = ($after | _bash_env_changed_record $before)
+
+        load-env $changes
+        $exec.stdout
+    } catch {
+        null
     }
-  }
 
-  let marker = $"__NU_BASH_ENV_MARKER_(random uuid)__"
+    # 4. Cleanup temporary files
+    try { rm $before_path $after_path } catch {}
 
-  let runner = '
-env
-printf "%s\n" "$2"
-. "$1" >/dev/null
-env
-'
-
-  let output = (^$shell -c $runner nu-bash-env $script_path $marker)
-  let parts = ($output | split row $marker)
-
-  if (($parts | length) < 2) {
-    error make {
-      msg: "bash-env: failed to capture shell environment"
+    # 5. Parse the captured text into structured Nushell data
+    if $raw_output != null and ($raw_output | str trim) != "" {
+        match $format {
+            "json" => { $raw_output | from json }
+            "csv" => { $raw_output | from csv }
+            "yaml" => { $raw_output | from yaml }
+            "lines" => { $raw_output | lines }
+            "columns" => { $raw_output | detect columns --guess }
+            _ => {
+                # Intelligent 'auto' fallback selection
+                let trimmed_out = ($raw_output | str trim)
+                if ($trimmed_out | str starts-with "{") or ($trimmed_out | str starts-with "[") {
+                    try { $raw_output | from json } catch { $raw_output | lines }
+                } else {
+                    try { $raw_output | detect columns --guess } catch { $raw_output | lines }
+                }
+            }
+        }
     }
-  }
+}
 
-  let before = (($parts | get 0) | _bash_env_lines_to_record)
-  let after = (($parts | get 1) | _bash_env_lines_to_record)
-  let changes = ($after | _bash_env_changed_record $before)
 
-  load-env $changes
+
+
+#######################################################################################
+# Audit all active network sockets and listening ports as a structured table
+# Audit all active network sockets and listening ports using standard system 'ss'
+# Audit all active network sockets and listening ports using standard system 'ss'
+def ports [] {
+    # -a (all), -t (tcp), -u (udp), -n (numeric ports), -p (show processes), -H (suppress header line)
+    let raw = (^ss -atunpH | complete)
+    if $raw.exit_code != 0 or ($raw.stdout | str trim | is-empty) { return [] }
+
+    $raw.stdout
+    | lines
+    | parse --regex '^(?P<protocol>\S+)\s+(?P<state>\S+)\s+(?P<recv_q>\d+)\s+(?P<send_q>\d+)\s+(?P<local>\S+)\s+(?P<peer>\S+)(?:\s+(?P<process>\S+))?$'
+    | insert port {|r|
+        # Split from the right side to isolate port numbers from IPv4, IPv6, and wildcards safely
+        let parts = ($r.local | split row ":")
+        try { $parts | last | into int } catch { null }
+      }
+    | insert pid {|r|
+        if ($r.process? | is-empty) { null } else {
+            let matches = ($r.process | parse --regex 'pid=(?P<id>\d+)')
+            if ($matches | is-empty) { null } else { $matches.0.id | into int }
+        }
+      }
+    | insert process_name {|r|
+        if ($r.process? | is-empty) { null } else {
+            let matches = ($r.process | parse --regex '"(?P<name>[^"]+)"')
+            if ($matches | is-empty) { null } else { $matches.0.name }
+        }
+      }
+    | reject process recv_q send_q # FIXED: Changed to lowercase to match regex fields
 }
