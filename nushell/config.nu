@@ -27,6 +27,7 @@ $env.PROMPT_COMMAND_RIGHT = ""
 
 $env.VISUAL = ["code", "--reuse-window", "--wait"]
 $env.EDITOR = ["nano", "-A", "-D", "-F", "-G", "-I", "-L", "-M", "-S", "-U", "-Z", "-a", "-q", "-_", "-/"]
+alias visudo = EDITOR="nano -A -D -F -G -I -L -M -S -U -Z -a -q -_ -/" visudo
 
 
 if $env.TERM_PROGRAM? == "vscode" {
