@@ -228,7 +228,14 @@ doc.kind = "util"
 doc.name = "open terminal"
 doc.description = "open bottom panel terminal and focus it"
 
-
+[[bind]]
+key = "tab"
+mode = "-- 📌 EDITOR --"
+command = "master-key.setMode"
+args.value = "-- ⌨️  WRITE --"
+doc.kind = "util"
+doc.name = "to write"
+doc.description = "quickly enter write mode from editor mode"
 # =============================================================================
 ## ## Clipboard (CUA)
 # =============================================================================
