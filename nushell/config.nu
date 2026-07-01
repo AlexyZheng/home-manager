@@ -44,16 +44,12 @@ if $env.TERM_PROGRAM? == "vscode" {
 
 $env.config = {
 
-    # ... your existing configuration ...
-    history: {file_format: "sqlite", isolation: false}
-}
-
-$env.config = {
-
     # ... your other configuration settings ...
 
     display_errors: {exit_code: false, termination_signal: false}
+    history: {file_format: "sqlite", isolation: false, max_size: 1_000_000, sync_on_enter: true}
 }
+
 
 # Set Fcitx environment variables for the session
 $env.GTK_IM_MODULE = "fcitx"
