@@ -32,3 +32,24 @@ def nano [
 
 
 }
+
+
+
+
+#====================================================================
+# Separate logic for running elevated nano directly with run0
+#====================================================================
+def "sudo nano" [
+    ...args: string     # The files or paths you want to edit as root
+    --line-numbers(-l)  # Switch to turn on line numbers
+] {
+    let base_flags = ["-A" "-D" "-F" "-G" "-I" "-L" "-M" "-S" "-U" "-Z" "-a" "-q" "-_" "-/"]
+    
+    let final_flags = if $line_numbers {
+        $base_flags | append ["-l"]
+    } else {
+        $base_flags
+    }
+
+    run0 --empower --setenv=PATH /usr/bin/nano ...$final_flags ...$args
+}
