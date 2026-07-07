@@ -5,16 +5,13 @@ def nano [
     ...args: string     # The files or arguments you want to pass
     --line-numbers(-l)  # Switch to turn on line numbers for nano fallback
 ] {
-    # Check for installation, AND that standard input is a terminal
+    # Check for installation, a graphical engine, AND that standard input is a terminal
     let vscode_installed = (which code | is-not-empty)
     let is_tty = (is-terminal --stdin)
 
     if ($vscode_installed and $is_tty) {
-        let editor_cmd = if ($env | get -o VISUAL) != null { $env.VISUAL } else { ["code"] }
-        let binary = $editor_cmd | first
-        let env_flags = $editor_cmd | drop 1
-
-        ^$binary ...$env_flags ...$args
+        # Call the binary explicitly to prevent any argument duplication or array misbehavior
+        ^code --reuse-window ...$args e> /dev/null o> /dev/null
     } else {
         let base_flags = ["-A" "-D" "-F" "-G" "-I" "-L" "-M" "-S" "-U" "-Z" "-a" "-q" "-_" "-/"]
         
@@ -25,15 +22,17 @@ def nano [
         }
 
         # Safe fallback execution path for minimal/single-user environments
-        ^run0 --empower --setenv=PATH /usr/bin/nano ...$final_flags ...$args
+        run0 --empower --setenv=PATH /usr/bin/nano ...$final_flags ...$args
     }
-
-
-
 }
 
-
-
+#====================================================================
+# Wrapper for VS Code to keep flags active but silence Electron spam
+#====================================================================
+def --wrapped code [...args: string] {
+    # Launch code and immediately dump all stdout/stderr from the wrapper
+    ^code ...$args e> /dev/null o> /dev/null
+}
 
 #====================================================================
 # Separate logic for running elevated nano directly with run0
