@@ -92,6 +92,9 @@ $env.XMODIFIERS = "@im=fcitx"
 #############################################################
 #simple aliases
 
+alias mihomo = sudo podman exec -it mihomo /mihomo
+
+
 alias vps = ssh ubuntu@work.76543211.xyz
 alias visudo = EDITOR="nano -A -D -F -G -I -L -M -S -U -Z -a -q -_ -/" visudo
 
