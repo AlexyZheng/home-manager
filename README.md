@@ -1,1 +1,1 @@
-Map out which external LSP binaries need to be installed (NixOS)
+Map out which external LSP binaries need to be installed for Vscode extensions to work (NixOS)
