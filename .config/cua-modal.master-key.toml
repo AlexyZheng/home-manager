@@ -4,54 +4,7 @@
 # A CUA-style, selection-first modal keybinding set for master-key.
 # Two modes: WRITE (type text) and EDITOR (commands). Motions always
 # extend the selection (Kakoune-style); there is no separate select mode.
-#
-# Mode switching:
-# - Meta+Tab      : toggle EDITOR ↔ WRITE
-# - Meta+Space    : cycle EDITOR → WRITE → EDITOR
-# - Space         : collapse selection (drop to single cursor)
-# - Enter         : insert a new line after the cursor
-#
-# Multicursor (visual macros):
-# - d / shift+d   : match next / match all (add cursors at occurrences)
-# - q / shift+q   : cursor below / above
-# - ;             : split lines (cursor at end of each selected line)
-# - u             : undo last cursor operation (tap repeatedly)
-# - i / shift+i   : grow / shrink selection (semantic)
-# - [             : select to bracket
-# - r             : replace & write (cut → WRITE mode)
-# - j             : join lines
-# - ' / shift+[   : wrap selection in quotes / brackets
-# - / / shift+/   : lowercase / uppercase
-# - .             : repeat last action (not motion)
-# - z / shift+z   : undo / redo (text)
-#
-# Line operations & folding:
-# - shift+up/down : move line up / down
-# - shift+f       : toggle fold at cursor
-#
-# WRITE mode entry points (shift = "and type"):
-# - shift+enter   : new line below → WRITE
-# - ctrl+enter    : new line above → WRITE
-# - shift+home    : line start → WRITE
-# - shift+end     : line end → WRITE
-#
-# Count (visual multiplier): press 1-9 then a command. For cursor-spawning
-# commands the count is exact from a single selection (3d = 3 cursors).
-#
-# Navigation (all motions extend the selection):
-# - Arrows        : char extend (no mod) / word (Ctrl) / line-doc (Ctrl+Shift)
-# - Home/,        : line start
-# - End           : line end
-# - Ctrl+Home/End : page up/down
-#
-# Delete:
-# - x = cut (selection, or whole line if none)
-# - k = delete line (no clipboard)
-# - delete    = delete word right
-# - backspace = delete word left
-#
-# All EDITOR bindings are single keys (or modifier+arrow for the
-# char/word/line hierarchy). WRITE mode falls through to VS Code defaults.
+
 
 # ── 1. HEADER ──
 [header]
@@ -72,18 +25,17 @@ name = "util"
 description = "Utility commands: mode switching, panels, file management."
 
 # ── 3. MODES ──
-# Two modes only. In EDITOR mode all motions extend the selection; use
-# Space to collapse the selection back to a single cursor.
+
 [[mode]]
 name = "-- ⌨️  WRITE --"
 default = true
 whenNoBinding = "insertCharacters"
-cursorShape = "LineThin"
+cursorShape = "UnderlineThin"
 highlight = "Alert"
 
 [[mode]]
 name = "-- 📌 EDITOR --"
-cursorShape = "Block"
+cursorShape = "BlockOutline"
 highlight = "NoHighlight"
 
 # =============================================================================
@@ -137,6 +89,30 @@ command = "cancelSelection"
 doc.kind = "util"
 doc.name = "collapse"
 doc.description = "collapse selection to a single cursor"
+
+[[bind]]
+key = "shift+space"
+mode = "-- 📌 EDITOR --"
+command = "runCommands" 
+args.commands = [
+    { command = "type", args = { text = " " } },
+    { command = "master-key.setMode", args = { value = "-- ⌨️  WRITE --" } }
+] 
+doc.kind = "util"
+doc.name = "→ write"
+doc.description = "insert space & flow back to WRITE"
+
+[[bind]]
+key = "shift+space"
+mode = "-- ⌨️  WRITE --"
+command = "runCommands" 
+args.commands = [
+    { command = "type", args = { text = " " } },
+    { command = "master-key.setMode", args = { value = "-- 📌 EDITOR --" } }
+] 
+doc.kind = "util"
+doc.name = "→ write"
+doc.description = "insert space & flow back to EDITOR"
 
 # Escape : universal escape → EDITOR mode
 [[bind]]
@@ -287,7 +263,6 @@ doc.kind = "action"
 doc.name = "del word →"
 doc.description = "delete word to the right"
 
-# backspace = Delete word left (CUA Ctrl+Backspace, drop Ctrl)
 [[bind]]
 key = "backspace"
 mode = "-- 📌 EDITOR --"
@@ -296,6 +271,55 @@ tags = ["action"]
 doc.kind = "action"
 doc.name = "del word ←"
 doc.description = "delete word to the left"
+
+[[bind]]
+key = "shift+backspace"
+mode = "-- 📌 EDITOR --"
+when = "editorHasSelection"
+command = "runCommands"
+args.commands = [
+    "deleteLeft",
+    { command = "master-key.setMode", args = { value = "-- ⌨️  WRITE --" } }
+]
+tags = ["action"]
+doc.kind = "action"
+doc.name = "delete → write"
+doc.description = "delete highlighted text & flow back to write mode"
+
+[[bind]]
+key = "shift+backspace"
+mode = "-- ⌨️  WRITE --"
+command = "runCommands"
+args.commands = [
+    "deleteLeft",
+    { command = "master-key.setMode", args = { value = "-- 📌 EDITOR --" } }
+]
+tags = ["action"]
+doc.kind = "action"
+doc.name = "delete → write"
+doc.description = "delete highlighted text & flow back to EDIT mode"
+
+
+# ctrl+c = Copy
+[[bind]]
+key = "ctrl+c"
+mode = "-- 📌 EDITOR --"
+command = "editor.action.clipboardCopyAction"
+tags = ["action"]
+doc.kind = "action"
+doc.name = "copy"
+doc.description = "copy selection"
+
+#  ctrl+v = Paste
+[[bind]]
+key = "ctrl+v"
+mode = "-- 📌 EDITOR --"
+command = "editor.action.clipboardPasteAction"
+tags = ["action"]
+doc.kind = "action"
+doc.name = "paste"
+doc.description = "paste clipboard"
+
 
 # c = Copy
 [[bind]]
@@ -316,6 +340,7 @@ tags = ["action"]
 doc.kind = "action"
 doc.name = "paste"
 doc.description = "paste clipboard"
+
 
 # =============================================================================
 ## ## History (text undo/redo + repeat last action)
