@@ -52,11 +52,25 @@ use ~/.config/nushell/completions/ssh-completions.nu *
 use ~/.config/nushell/completions/tcpdump-completions.nu *
 use ~/.config/nushell/completions/vscode-completions.nu *
 
+$env.config.completions.algorithm = "Fuzzy"
 
-
+$env.config.footer_mode = "Always"
+$env.config.table.header_on_separator = true
 
 $env.config.show_banner = false
-$env.PROMPT_COMMAND_RIGHT = ""
+$env.PROMPT_COMMAND_RIGHT = {|| date now | format date "%r" }
+
+$env.config.abbreviations = {
+    gd: 'git diff'
+    gp: 'git pull'
+    gs: 'git status'
+    gl: 'git log'
+    gco: 'git checkout'
+    gb: 'git branch'
+    grv: 'git remote -v'
+    ut: 'use toolkit.nu'
+    lg: 'lazygit'
+}
 
 
 $env.VISUAL = ["code", "--reuse-window", "--wait"]
