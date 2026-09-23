@@ -11,16 +11,7 @@ $env.config = ($env.config? | default {} | merge {
 })
 
 
-$env.PROMPT_COMMAND = { || 
-    # Grab the variable directly from the current shell's memory
-    let mode = ($env.ACTIVE_SHELL? | default "nu")
-    
-    # We use STARSHIP_SESSION_KEY or a similar existing env var 
-    # to pass the state into the Starship process
-    with-env { SHANNON_MODE: $mode } {
-        starship prompt --cmd-duration $env.CMD_DURATION_MS $"--status=($env.LAST_EXIT_CODE)" 
-    }
-}
+
 
 # 4. Strip secondary indicators to prevent layout conflicts
 $env.PROMPT_INDICATOR = ""
