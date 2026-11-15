@@ -2,4 +2,6 @@ To do: Map out which external LSP binaries need to be installed for Vscode exten
 nufmt
 nu-lint
 
+*nushell 0.117.0+ configure helix editor mode
+
 For NixOS home-manager: make ~/dotfiles folder & git this repo inside ~/dotfiles & not in ~/
