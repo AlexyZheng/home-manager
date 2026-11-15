@@ -195,7 +195,7 @@ def --env bash_portal [
             "raw"
         }
     } else {
-        $format | str downcase
+        $format | str lowercase
     }
 
     if $target_format == "raw" {

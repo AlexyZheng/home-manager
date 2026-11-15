@@ -109,7 +109,7 @@ def --wrapped curl [...rest: string] {
     if ($rest | length) == 1 and not ($rest.0 | str starts-with "-") {
         let clean_url = ($rest.0 | split row "?" | first)
         try {
-            http get --timeout 30sec $clean_url
+            http get --max-time 30sec $clean_url
         } catch {
             try {
                 ^wcurl --curl-options "--connect-timeout 30 --max-time 30" $clean_url
