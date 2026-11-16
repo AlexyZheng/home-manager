@@ -3,3 +3,4 @@ history.sqlite3-shm
 history.sqlite3-wal
 history.txt
 dir_index.db
+.vscode/*
