@@ -16,7 +16,6 @@
         "commandCenter.foreground": "#e7e7e7",
         "sash.hoverBorder": "#7895d0",
         "statusBar.background": "#5277c3",
-        "statusBar.border": "#5277c3",
         "statusBar.debuggingBackground": "#5277c3",
         "statusBar.debuggingForeground": "#e7e7e7",
         "statusBar.foreground": "#e7e7e7",
@@ -26,9 +25,11 @@
         "statusBarItem.remoteForeground": "#e7e7e7",
         "titleBar.activeBackground": "#5277c3",
         "titleBar.activeForeground": "#e7e7e7",
-        "titleBar.border": "#5277c3",
         "titleBar.inactiveBackground": "#5277c399",
-        "titleBar.inactiveForeground": "#e7e7e799"
+        "titleBar.inactiveForeground": "#e7e7e799",
+        "statusBar.border": "#5277c3",
+        "titleBar.border": "#5277c3"
     },
-    "peacock.color": "#5277c3"
+    "peacock.color": "#5277c3",
+    "nixEnvSelector.suggestion": false
 }
